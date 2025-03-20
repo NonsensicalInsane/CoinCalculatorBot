@@ -7,7 +7,16 @@
         "config": {
           "runtime": "python3.9",
           "maxDuration": 10,
-          "requirementsPath": "vercel-requirements.txt"
+          "includeFiles": [
+            "Source/python/calculations.py",
+            "Source/python/env_config.py"
+          ],
+          "excludeFiles": [
+            "**/*",
+            "!api/webhook.py",
+            "!Source/python/calculations.py",
+            "!Source/python/env_config.py"
+          ]
         }
       }
     ],
@@ -19,11 +28,5 @@
     ],
     "env": {
       "MINIMAL_ASSETS": "true"
-    },
-    "functions": {
-      "api/**": {
-
-        "excludeFiles": "{*.cache,public,app,__pycache__/,.vercel,.now,.env,output/,temp/}/**"
-      }
     }
 }

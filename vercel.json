@@ -19,5 +19,11 @@
     ],
     "env": {
       "MINIMAL_ASSETS": "true"
+    },
+    "functions": {
+      "api/**": {
+
+        "excludeFiles": "{*.cache,public,app,__pycache__/,.vercel,.now,.env,output/,temp/}/**"
+      }
     }
 }

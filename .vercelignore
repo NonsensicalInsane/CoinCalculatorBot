@@ -1,0 +1,74 @@
+# Exclude development and unnecessary files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Version control
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Environments and config
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.env.local
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Selenium stuff from binance_scraper
+chromedriver
+chromedriver.exe
+geckodriver
+geckodriver.exe
+binance_leverage_data.json
+
+# Large assets that can be hosted elsewhere
+assets/fonts/
+assets/backgrounds/
+assets/templates/
+
+# Large directories not needed for API functionality
+Source/app/
+Source/gui/
+output/ 

@@ -10,10 +10,12 @@ from http import HTTPStatus
 from telegram import Update, Bot
 from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, CallbackContext
 
+# Configure a minimal environment for serverless
+os.environ['MINIMAL_ASSETS'] = 'true'
+
 # Import our core functionality
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Source.python.core import generate_pnl_image
 from Source.python.env_config import load_environment, get_environment_variable
 
 # Set up logging
@@ -45,24 +47,22 @@ def start(update: Update, context: CallbackContext) -> None:
 def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     help_text = (
-        "🤖 *PnL Image Generator Bot Commands:*\n\n"
+        "🤖 PnL Image Generator Bot Commands:\n\n"
         "/binance <pair> <leverage> <entry> <exit> <type> - Generate Binance image\n"
         "/mexc <pair> <leverage> <entry> <exit> <type> - Generate MEXC image\n"
         "/bitget <pair> <leverage> <entry> <exit> <type> [username] - Generate BitGet image\n\n"
-        "/stockmarket - Show available stockmarkets\n"
         "/help - Show this help message\n\n"
-        "*Position type* must be 'long' or 'short'\n"
-        "*Username* is only used for BitGet template"
+        "Position type must be 'long' or 'short'"
     )
     update.message.reply_text(help_text)
 
-def generate_binance(update: Update, context: CallbackContext) -> None:
-    """Generate a Binance PnL image."""
+def process_pnl_command(update: Update, context: CallbackContext, exchange: str) -> None:
+    """Generic function to handle PnL image generation for any exchange."""
     try:
         # Extract parameters from command
         args = context.args
         if len(args) < 5:
-            update.message.reply_text("Not enough arguments. Format: /binance BTCUSDT 10 50000 55000 long")
+            update.message.reply_text(f"Not enough arguments. Format: /{exchange} BTCUSDT 10 50000 55000 long")
             return
 
         trading_pair = args[0]
@@ -70,156 +70,63 @@ def generate_binance(update: Update, context: CallbackContext) -> None:
         entry_price = float(args[2])
         last_price = float(args[3])
         position_type = args[4].lower()
+        
+        # Optional username for BitGet
+        handle_username = None
+        if exchange == "bitget" and len(args) > 5:
+            handle_username = args[5]
+            
         referral_code = get_environment_variable('TELEGRAM', 'referral_code', '48604752')
 
         # Send a processing message
-        message = update.message.reply_text("Generating Binance PnL image...")
-
-        # Override output directory for serverless environment
-        os.environ['OUTPUT_DIR'] = os.path.join(TEMP_DIR, 'output')
+        message = update.message.reply_text(f"Generating {exchange.upper()} PnL image...")
         
-        # Generate image
-        image_path = generate_pnl_image(
-            trading_pair=trading_pair,
-            leverage=leverage,
-            entry_price=entry_price,
-            last_price=last_price,
-            referral_code=referral_code,
-            position_type=position_type,
-            exchange="binance"
+        # In serverless environment, we'll use a minimal version without images
+        # Just calculate the PnL and send a text response
+        from Source.python.calculations import calculate_leveraged_pnl_percentage
+        
+        is_long = position_type.lower() == "long"
+        pnl_percentage = calculate_leveraged_pnl_percentage(entry_price, last_price, leverage, is_long)
+        
+        # Format PnL with sign and 2 decimal places
+        sign = "+" if pnl_percentage >= 0 else ""
+        pnl_text = f"{sign}{pnl_percentage:.2f}%"
+        
+        # Create a text message with the PnL information
+        response_text = (
+            f"*{position_type.upper()} {trading_pair} {leverage}x*\n\n"
+            f"📊 PnL: {pnl_text}\n"
+            f"📈 Entry: {entry_price}\n"
+            f"📉 Exit: {last_price}\n"
+            f"⚡ Leverage: {leverage}x\n"
         )
-
-        # Send the image
-        with open(image_path, 'rb') as img:
-            bot.send_photo(
-                chat_id=update.effective_chat.id,
-                photo=img,
-                caption=f"{trading_pair} {leverage}x {position_type.capitalize()} • Entry: {entry_price} • Exit: {last_price}"
-            )
+        
+        if handle_username:
+            response_text += f"👤 Username: {handle_username}\n"
+            
+        response_text += f"\nExchange: {exchange.upper()}"
         
         # Delete the processing message
         bot.delete_message(chat_id=update.effective_chat.id, message_id=message.message_id)
         
-        # Clean up the temporary file
-        try:
-            os.remove(image_path)
-        except Exception as e:
-            logger.warning(f"Failed to remove temporary file: {e}")
+        # Send the text response
+        update.message.reply_text(response_text)
 
     except Exception as e:
-        logger.error(f"Error generating image: {e}")
-        update.message.reply_text(f"Error generating image: {str(e)}")
+        logger.error(f"Error processing command: {e}")
+        update.message.reply_text(f"Error: {str(e)}")
+
+def generate_binance(update: Update, context: CallbackContext) -> None:
+    """Generate a Binance PnL calculation."""
+    process_pnl_command(update, context, "binance")
 
 def generate_mexc(update: Update, context: CallbackContext) -> None:
-    """Generate a MEXC PnL image."""
-    try:
-        # Extract parameters from command
-        args = context.args
-        if len(args) < 5:
-            update.message.reply_text("Not enough arguments. Format: /mexc BTCUSDT 10 50000 55000 long")
-            return
-
-        trading_pair = args[0]
-        leverage = int(args[1])
-        entry_price = float(args[2])
-        last_price = float(args[3])
-        position_type = args[4].lower()
-        referral_code = get_environment_variable('TELEGRAM', 'referral_code', '48604752')
-
-        # Send a processing message
-        message = update.message.reply_text("Generating MEXC PnL image...")
-
-        # Override output directory for serverless environment
-        os.environ['OUTPUT_DIR'] = os.path.join(TEMP_DIR, 'output')
-        
-        # Generate image
-        image_path = generate_pnl_image(
-            trading_pair=trading_pair,
-            leverage=leverage,
-            entry_price=entry_price,
-            last_price=last_price,
-            referral_code=referral_code,
-            position_type=position_type,
-            exchange="mexc"
-        )
-
-        # Send the image
-        with open(image_path, 'rb') as img:
-            bot.send_photo(
-                chat_id=update.effective_chat.id,
-                photo=img,
-                caption=f"{trading_pair} {leverage}x {position_type.capitalize()} • Entry: {entry_price} • Exit: {last_price}"
-            )
-        
-        # Delete the processing message
-        bot.delete_message(chat_id=update.effective_chat.id, message_id=message.message_id)
-        
-        # Clean up the temporary file
-        try:
-            os.remove(image_path)
-        except Exception as e:
-            logger.warning(f"Failed to remove temporary file: {e}")
-
-    except Exception as e:
-        logger.error(f"Error generating image: {e}")
-        update.message.reply_text(f"Error generating image: {str(e)}")
+    """Generate a MEXC PnL calculation."""
+    process_pnl_command(update, context, "mexc")
 
 def generate_bitget(update: Update, context: CallbackContext) -> None:
-    """Generate a BitGet PnL image."""
-    try:
-        # Extract parameters from command
-        args = context.args
-        if len(args) < 5:
-            update.message.reply_text("Not enough arguments. Format: /bitget BTCUSDT 10 50000 55000 long [username]")
-            return
-
-        trading_pair = args[0]
-        leverage = int(args[1])
-        entry_price = float(args[2])
-        last_price = float(args[3])
-        position_type = args[4].lower()
-        # Optional username for BitGet
-        handle_username = args[5] if len(args) > 5 else None
-        referral_code = get_environment_variable('TELEGRAM', 'referral_code', '48604752')
-
-        # Send a processing message
-        message = update.message.reply_text("Generating BitGet PnL image...")
-
-        # Override output directory for serverless environment
-        os.environ['OUTPUT_DIR'] = os.path.join(TEMP_DIR, 'output')
-        
-        # Generate image
-        image_path = generate_pnl_image(
-            trading_pair=trading_pair,
-            leverage=leverage,
-            entry_price=entry_price,
-            last_price=last_price,
-            referral_code=referral_code,
-            position_type=position_type,
-            exchange="bitget",
-            handle_username=handle_username
-        )
-
-        # Send the image
-        with open(image_path, 'rb') as img:
-            bot.send_photo(
-                chat_id=update.effective_chat.id,
-                photo=img,
-                caption=f"{trading_pair} {leverage}x {position_type.capitalize()} • Entry: {entry_price} • Exit: {last_price}"
-            )
-        
-        # Delete the processing message
-        bot.delete_message(chat_id=update.effective_chat.id, message_id=message.message_id)
-        
-        # Clean up the temporary file
-        try:
-            os.remove(image_path)
-        except Exception as e:
-            logger.warning(f"Failed to remove temporary file: {e}")
-
-    except Exception as e:
-        logger.error(f"Error generating image: {e}")
-        update.message.reply_text(f"Error generating image: {str(e)}")
+    """Generate a BitGet PnL calculation."""
+    process_pnl_command(update, context, "bitget")
 
 # Register handlers
 dispatcher.add_handler(CommandHandler("start", start))
@@ -249,13 +156,12 @@ def handler(request):
     # Check if it's a POST request with a webhook
     if request.method == "POST":
         return webhook(request)
-    
-    # Return a simple health check for GET requests
+        
+    # For GET requests, return a simple status check
     return {
-        "statusCode": HTTPStatus.OK,
+        "statusCode": 200,
         "body": json.dumps({
             "status": "ok",
-            "message": "Telegram bot webhook is active",
-            "bot_info": bot.get_me().to_dict()
+            "message": "PnL Calculator Bot API is running. Send requests to the webhook endpoint."
         })
     } 

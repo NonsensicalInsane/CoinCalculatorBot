@@ -1,0 +1,21 @@
+# Core dependencies
+Pillow>=9.0.0
+qrcode>=7.3.1
+requests>=2.27.1
+configparser>=5.2.0
+python-dateutil>=2.8.2
+python-dotenv>=0.20.0
+
+# Web interface
+gradio>=3.4.1
+
+# Telegram integration
+python-telegram-bot==13.15
+telethon>=1.24.0
+
+# Web scraping (for Binance leverage data)
+selenium>=4.1.0
+webdriver-manager>=3.5.2
+
+# Image manipulation
+numpy>=1.22.3

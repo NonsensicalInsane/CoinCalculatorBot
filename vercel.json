@@ -1,26 +1,18 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/webhook.py",
-      "use": "@vercel/python",
-      "config": {
-        "runtime": "python3.10",
-        "maxDuration": 10,
-        "includeFiles": [
-          "Source/python/calculations.py",
-          "Source/python/env_config.py"
-        ]
+    "version": 2,
+    "builds": [
+      {
+        "src": "api/webhook.py",
+        "use": "@vercel/python",
+        "config": {
+          "runtime": "python3.10"
+        }
       }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/webhook.py"
-    }
-  ],
-  "env": {
-    "MINIMAL_ASSETS": "true"
-  }
+    ],
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "api/webhook.py"
+      }
+    ]
 }

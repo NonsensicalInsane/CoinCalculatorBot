@@ -3,10 +3,8 @@ Telegram Bot for PnL Image Generator
 A clean, integrated interface for generating trading position images via Telegram
 """
 
-import os
-import sys
+
 import logging
-import configparser
 from datetime import datetime
 import traceback
 from telegram import Update, ParseMode, InlineKeyboardButton, InlineKeyboardMarkup

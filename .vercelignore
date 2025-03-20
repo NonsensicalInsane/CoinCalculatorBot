@@ -71,11 +71,4 @@ assets/templates/
 # Large directories not needed for API functionality
 Source/app/
 Source/gui/
-output/
-
-# Keep only the webhook code and calculations
-*
-!api/webhook.py
-!api/__init__.py
-!vercel.json
-!vercel-requirements.txt 
+output/ 
